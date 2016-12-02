@@ -1,19 +1,28 @@
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import java.util.concurrent.atomic.AtomicInteger
 
 import ExchangeRateActor.{Price, SellEuroPrice}
 import ExchangeRateTicker.StartTicking
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorLogging, Props}
 
-class ExchangeRateTicker extends Actor {
+class ExchangeRateTicker extends Actor with ActorLogging {
 
   private val exchangeRate = context.actorOf(ExchangeRateActor.props)
+
+  private val lastPrice = new AtomicInteger()
 
   override def receive: Receive = {
     case StartTicking => {
       exchangeRate ! SellEuroPrice
     }
-    case Price(value, currency) => val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")); println(s"$now : BTC == $value $currency")
+    case Price(value, currency) => {
+      val intValue = value.intValue()
+      lastPrice.getAndSet(intValue) match {
+        case 0 => log.info("First known price: {} {}", value, currency)
+        case up if up > intValue => log.info("Up : {} {}", value, currency)
+        case down if down < intValue => log.info("Down : {} {}", value, currency)
+        case _ => log.info("Same : {} {}", value, currency)
+      }
+    }
   }
 }
 
