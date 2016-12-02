@@ -9,7 +9,7 @@ class ExchangeRateActor extends Actor {
 
   override def receive: Receive = {
     case SellPrice(currency) => {
-      sender() ! Price(ticker.get(currency).getSell, currency)
+      sender() ! Price(ticker.get(currency).getSell, ticker.get(currency).getSymbol)
     }
     case SellEuroPrice => self forward SellPrice(euroCurrency)
     case ConvertEuroToBTC(euro) => sender() ! ExchangeRates.toBTC(euroCurrency, euro)
