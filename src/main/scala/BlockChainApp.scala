@@ -1,49 +1,21 @@
-import ExchangeRateActor.{ConvertEuroToBTC, SellEuroPrice}
-import StatisticsActor.BlocksSize
+import ExchangeRateTicker.StartTicking
 import akka.actor.ActorSystem
-import akka.util.Timeout
-
-import scala.util.{Failure, Success}
 
 /**
   * Created by marcel on 2-12-2016.
   */
 object BlockChainApp extends App{
 
-
-
   override def main(args:Array[String]) = {
-
     val system = ActorSystem()
-    val exchangeRate = system.actorOf(ExchangeRateActor.props, "exchangeRate")
-    val stats = system.actorOf(StatisticsActor.props, "stats")
-
-    import scala.concurrent.duration._
-    implicit val timeout = Timeout(5 seconds)
-
-    import akka.pattern.ask
-
+    val ticker = system.actorOf(ExchangeRateTicker.props)
     import scala.concurrent.ExecutionContext.Implicits.global
-
-    val euroPriceFuture = exchangeRate ? SellEuroPrice
-    euroPriceFuture.onComplete {
-      case Success(euroPrice) =>
-        println(s"SELL 1 BTC == €$euroPrice")
-      case Failure(e) => e.printStackTrace()
-    }
-
-    val btcOneEuroPriceFuture = exchangeRate ? ConvertEuroToBTC(java.math.BigDecimal.valueOf(1))
-    btcOneEuroPriceFuture.onComplete {
-      case Success(btcPrice) => println(s"BUY €1 == $btcPrice BTC")
-      case Failure(e) => e.printStackTrace()
-    }
-
-    val blocksSizeFuture = stats ? BlocksSize
-    blocksSizeFuture.onComplete {
-      case Success(blocks) => println(s"Blocks: $blocks")
-      case Failure(e) => e.printStackTrace()
-    }
-
+    import scala.concurrent.duration._
+    system.scheduler.schedule(
+      0 milliseconds,
+      3 seconds,
+      ticker,
+      StartTicking)
   }
 
 }
